@@ -19,7 +19,7 @@ spec:
      
       containers:
       - name: test-app
-        image: aaarpitaaa/webapp:latest
+        image: aaarpitaaa/webappimage:latest
         env:
         - name: MONGODB_HOST
           valueFrom:
