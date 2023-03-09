@@ -1,44 +1,44 @@
-apiVersion: apps/v1    
+apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: mongo
 spec:
-  serviceName: "mongo"
-  replicas: 2
   selector:
     matchLabels:
-      role: mongo
+      app: mongo
+  serviceName: "mongo"
+  replicas: 2
   template:
     metadata:
       labels:
-        role: mongo
-        environment: test
+        app: mongo
     spec:
       terminationGracePeriodSeconds: 10
       containers:
-        - name: mongo
-          image: mongo
-          command:
-            - mongod
-            - "--replSet"
-            - rs0
-          ports:
-            - containerPort: 27017
-          volumeMounts:
-            - name: mongo-persistent-storage
-              mountPath: /data/db
-        - name: mongo-sidecar
-          image: cvallance/mongo-k8s-sidecar
-          env:
-            - name: MONGO_SIDECAR_POD_LABELS
-              value: "role=mongo,environment=test"
+      - name: mongo
+        image: mongo
+        command:
+        - mongod
+        - "--bind_ip_all"
+        - "--replSet"
+        - rs0
+        env:
+        - name: MONGODB_DATABASE
+          valueFrom:
+            secretKeyRef:
+              name: mongodb-secret
+              key: mongodb-db-name
+        ports:
+        - containerPort: 27017
+        volumeMounts:
+        - name: mongo-volume
+          mountPath: /data/db
   volumeClaimTemplates:
   - metadata:
-      name: mongo-persistent-storage
-      annotations:
-        volume.beta.kubernetes.io/storage-class: "fast"
+      name: mongo-volume
     spec:
-      accessModes: [ "ReadWriteOnce" ]
+      storageClassName: managed-nfs-storage
+      accessModes: [ "ReadWriteMany" ]
       resources:
         requests:
-          storage: 50Gi
+          storage: 100Mi
