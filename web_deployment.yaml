@@ -20,6 +20,9 @@ spec:
       containers:
       - name: test-app
         image: aaarpitaaa/webappimage:latest
+        volumeMounts:
+          - name: shared-logs
+            mountPath: /var/log/
         env:
         - name: MONGODB_HOST
           valueFrom:
@@ -37,4 +40,13 @@ spec:
  #            - nc -z test 5000
  #         initialDelaySeconds: 60
  #         periodSeconds: 10
+      - name: sidecar-container
+        image: busybox
+        command: ["sh","-c","while true; do cat /var/log/sidecar.log; sleep 30; done"]
+        volumeMounts:
+          - name: shared-logs
+            mountPath: /var/log/
+      volumes:
+      - name: shared-logs
+        emptyDir: {}
 
