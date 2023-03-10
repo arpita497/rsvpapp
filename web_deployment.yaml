@@ -20,9 +20,6 @@ spec:
       containers:
       - name: test-app
         image: aaarpitaaa/webappimage:latest
-        volumeMounts:
-          - name: shared-logs
-            mountPath: /var/log/
         env:
         - name: MONGODB_HOST
           valueFrom:
@@ -31,16 +28,7 @@ spec:
               key: database_url
         ports:
         - containerPort: 5000
-          name: web-port
-      - name: sidecar-container
-        image: busybox
-        command: ["sh","-c","while true; do cat /var/log/sidecar.log; sleep 30; done"]
-        volumeMounts:
-          - name: shared-logs
-            mountPath: /var/log/
-      volumes:
-      - name: shared-logs
-        emptyDir: {} 
+          name: web-port 
         livenessProbe:
           exec:
             command: 
