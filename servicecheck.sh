@@ -1,7 +1,7 @@
 #!bin/bash
 
 sudo kubectl get svc test
-if [ $(echo $?) == "0" ]
+if [ $(echo $?) = 0 ]
 then
   echo "service already exists"
 else
@@ -9,7 +9,7 @@ else
 fi
 
 sudo kubectl get svc mongo
-if [ $(echo $?) == "0" ]
+if [ $(echo $?) = 0 ]
 then
   echo "service already exists"
 else
