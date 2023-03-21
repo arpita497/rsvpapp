@@ -1,0 +1,74 @@
+
+node () {
+    
+    stage ('git checkout step') {
+        git branch: 'demo', credentialsId: '05447940-1535-4b50-8bb2-c1dfb09bb6d7', url: 'https://github.com/arpita497/rsvpapp.git'
+    }
+
+  stage('SonarQube Analysis') {
+    
+    def scannerHome = tool 'sonarqube';
+    withSonarQubeEnv() {
+      sh '''
+      /var/lib/jenkins/tools/hudson.plugins.sonar.SonarRunnerInstallation/sonarqube/bin/sonar-scanner \
+        -Dsonar.projectKey=pythonapp \
+        -Dsonar.sources=. \
+        -Dsonar.host.url=http://65.0.102.109:9001 \
+        -Dsonar.login=sqp_44c105bdb7638261dae1ec39403d082b826be6f3
+        '''
+    }
+  }
+  
+    stage("Quality Gate") {
+            
+              timeout(time: 2, unit: 'MINUTES') {
+                waitForQualityGate abortPipeline: false, credentialsId: 'jenkins'
+              }
+            
+          } 
+          
+        stage ('Docker image push and scan'){
+        sh '''
+            sudo chmod 666 /var/run/docker.sock
+            docker image build -t webappimage .
+            docker image tag webappimage aaarpitaaa/webappimage:$BUILD_ID
+            docker push aaarpitaaa/webappimage:$BUILD_ID
+            docker tag webappimage apatnaik.jfrog.io/python-docker/aaarpitaaa/webappimage:$BUILD_ID
+            docker push apatnaik.jfrog.io/python-docker/aaarpitaaa/webappimage:$BUILD_ID
+            sudo jf docker scan aaarpitaaa/webappimage:$BUILD_ID
+            docker pull apatnaik.jfrog.io/python-docker/aaarpitaaa/webappimage:$BUILD_ID
+            
+        '''
+    } 
+
+ /*   
+    stage ('eks-deployment'){
+        
+        sh  '''
+            
+            sed -i "s/latest/$BUILD_ID/g" Deployment.yml
+            kubectl apply -f eks-service.yml
+            kubectl apply -f Deployment.yml
+                
+        '''
+    } */
+   
+    stage ('eks-ssh'){
+        sshagent(['kubernetes']) {
+            
+            sh'''   
+                    ssh -o StrictHostKeyChecking=no -l ubuntu 172.31.43.85 sudo rm -r rsvpapp
+                    ssh -o StrictHostKeyChecking=no -l ubuntu 172.31.43.85 git clone --branch demo https://github.com/arpita497/rsvpapp.git
+                    ssh -o StrictHostKeyChecking=no -l ubuntu 172.31.43.85 sed -i "s/latest/$BUILD_ID/g" rsvpapp/web_deployment.yaml
+                    ssh -o StrictHostKeyChecking=no -l ubuntu 172.31.43.85 sh rsvpapp/servicecheck.sh
+                    ssh -o StrictHostKeyChecking=no -l ubuntu 172.31.43.85 sudo kubectl apply -f rsvpapp/db_configmap.yaml
+                    ssh -o StrictHostKeyChecking=no -l ubuntu 172.31.43.85 sudo kubectl apply -f rsvpapp/kubernetes_secret.yaml
+                    ssh -o StrictHostKeyChecking=no -l ubuntu 172.31.43.85 sudo kubectl apply -f rsvpapp/mongo_deployment.yaml
+                    ssh -o StrictHostKeyChecking=no -l ubuntu 172.31.43.85 sudo kubectl apply -f rsvpapp/mongo_statefulset.yaml
+                    ssh -o StrictHostKeyChecking=no -l ubuntu 172.31.43.85 sudo kubectl apply -f rsvpapp/web_deployment.yaml
+                    
+
+            '''
+        }
+    } 
+}   
